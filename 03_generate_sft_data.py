@@ -25,6 +25,14 @@ def verify_trace(trace: str, answer: str) -> bool:
 
 
 def load_jsonl(path: str) -> list:
+    p = Path(path)
+    if p.suffix == ".csv":
+        import csv
+        data = []
+        with open(p) as f:
+            for row in csv.DictReader(f):
+                data.append(dict(row))
+        return data
     data = []
     with open(path) as f:
         for line in f:
@@ -35,8 +43,9 @@ def load_jsonl(path: str) -> list:
 
 
 def main():
-    # Find training file
+    # Find training file — prefer CSV
     candidates = (
+        list(Path(".").glob("train*.csv")) +
         list(Path(".").glob("train*.jsonl")) +
         list(Path(".").glob("train*.json"))
     )

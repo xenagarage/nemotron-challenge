@@ -5,50 +5,76 @@ Requires: KAGGLE_USERNAME and KAGGLE_KEY env vars (from kaggle.com/settings/acco
 """
 import os
 import json
-import subprocess
 from collections import Counter
 from pathlib import Path
 
 
 def download_data():
-    if Path("train.jsonl").exists() or list(Path(".").glob("train*.jsonl")):
-        print("Data already downloaded.")
+    # Check for CSV (competition uses CSV format)
+    if Path("train.csv").exists():
+        print("train.csv already present.")
         return
-    print("Downloading competition data...")
-    subprocess.run([
-        "kaggle", "competitions", "download",
-        "-c", "nvidia-nemotron-model-reasoning-challenge",
-        "--path", "."
-    ], check=True)
-    for zf in Path(".").glob("*.zip"):
-        subprocess.run(["unzip", "-o", str(zf)], check=True)
-    print("Data downloaded!")
+    if list(Path(".").glob("train*.jsonl")) or list(Path(".").glob("train*.json")):
+        print("Training data already present.")
+        return
+    # Try kagglehub first
+    try:
+        import kagglehub
+        print("Downloading via kagglehub...")
+        path = kagglehub.competition_download("nvidia-nemotron-model-reasoning-challenge")
+        print(f"Downloaded to: {path}")
+        # Copy files here
+        import shutil
+        for f in Path(path).iterdir():
+            shutil.copy(f, Path(".") / f.name)
+        return
+    except Exception as e:
+        print(f"kagglehub failed: {e}")
+    print("ERROR: Please manually download from:")
+    print("  kaggle.com/competitions/nvidia-nemotron-model-reasoning-challenge/data")
+    print("  and unzip into:", Path(".").resolve())
+    exit(1)
 
 
 download_data()
 
 
-def load_jsonl(path):
-    data = []
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                data.append(json.loads(line))
-    return data
+def load_data(path):
+    """Load CSV or JSONL training data into a list of dicts."""
+    p = Path(path)
+    if p.suffix == ".csv":
+        import csv
+        data = []
+        with open(p) as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                data.append(dict(row))
+        return data
+    else:
+        data = []
+        with open(p) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    data.append(json.loads(line))
+        return data
 
 
-# Find training file
-train_files = list(Path(".").glob("train*.jsonl")) + list(Path(".").glob("train*.json"))
+# Find training file — prefer CSV since that's what the competition provides
+train_files = (
+    list(Path(".").glob("train*.csv")) +
+    list(Path(".").glob("train*.jsonl")) +
+    list(Path(".").glob("train*.json"))
+)
 print(f"\nAll files in directory:")
 for f in sorted(Path(".").iterdir()):
     print(f"  {f.name}")
 
 if not train_files:
-    print("\nERROR: No training file found. Check the filenames above.")
+    print("\nERROR: No training file found.")
     exit(1)
 
-train_data = load_jsonl(str(train_files[0]))
+train_data = load_data(str(train_files[0]))
 print(f"\nLoaded {len(train_data)} training examples from {train_files[0]}")
 print(f"Fields: {list(train_data[0].keys())}")
 
