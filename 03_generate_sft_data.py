@@ -80,22 +80,22 @@ def main():
         raw_cat = example.get("category") or example.get("type") or ""
         if not raw_cat:
             q_lower = question.lower()
-            if "bit manipulation" in q_lower or "bit shift" in q_lower or "xor" in q_lower:
+            if "bit manipulation" in q_lower or "bit shift" in q_lower or "xor" in q_lower or "8-bit" in q_lower:
                 raw_cat = "bit_manipulation"
-            elif "cipher" in q_lower or "secret message" in q_lower or "decode" in q_lower:
+            elif "cipher" in q_lower or "secret message" in q_lower or "decode" in q_lower or "decrypt" in q_lower or "encrypt" in q_lower:
                 raw_cat = "cipher"
-            elif "unit" in q_lower and ("convert" in q_lower or "meter" in q_lower or "gram" in q_lower or "liter" in q_lower):
+            elif "unit" in q_lower and ("convert" in q_lower or "meter" in q_lower or "gram" in q_lower or "liter" in q_lower or "kilogram" in q_lower or "kilometer" in q_lower):
                 raw_cat = "unit_conversion"
-            elif "gravity" in q_lower or "fall" in q_lower or "grid" in q_lower:
+            elif "gravity" in q_lower or "gravitational" in q_lower or "falling distance" in q_lower or "0.5*g" in q_lower or "0.5 * g" in q_lower:
                 raw_cat = "gravity"
-            elif "numeral" in q_lower or "base" in q_lower or "hexadecimal" in q_lower or "binary" in q_lower:
+            elif "numeral" in q_lower or "hexadecimal" in q_lower or ("base" in q_lower and ("convert" in q_lower or "decimal" in q_lower)):
                 raw_cat = "numeral"
+            elif "transformation rules" in q_lower or ("transformation" in q_lower and "determine the result" in q_lower):
+                raw_cat = "equation_symbolic"
             elif "cryptarithm" in q_lower or "each letter" in q_lower or "each character" in q_lower:
                 raw_cat = "cryptarithm_deduce"
-            elif "symbolic" in q_lower or "symbol" in q_lower:
-                raw_cat = "equation_symbolic"
             else:
-                raw_cat = "equation_numeric"
+                raw_cat = "equation_symbolic"  # safe fallback (symbolic trace handles both cases)
         category = raw_cat
 
         if not question or not answer:

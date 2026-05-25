@@ -49,8 +49,58 @@ def parse_puzzle(question: str):
 
 # ─── CIPHER SOLVER ────────────────────────────────────────────────────────────
 
+def parse_puzzle_arrow(question: str):
+    """Parse puzzles using -> as separator (word-level substitution ciphers)."""
+    lines = [l.strip() for l in question.strip().split('\n') if l.strip()]
+    examples, query = [], None
+    for line in lines:
+        if '->' in line:
+            parts = line.split('->', 1)
+            lhs, rhs = parts[0].strip(), parts[1].strip()
+            if lhs and rhs:
+                examples.append((lhs, rhs))
+        elif any(x in line.lower() for x in ['determine', 'decrypt', 'result for:', 'decode']):
+            if ':' in line:
+                q = line.split(':', 1)[1].strip()
+                if q:
+                    query = q
+    # if query still not found, last non-arrow non-instruction line is the query
+    if not query:
+        for line in reversed(lines):
+            if '->' not in line and not any(
+                x in line.lower() for x in
+                ['determine', 'decrypt', 'decode', 'example', 'wonderland', 'alice', 'secret', 'rule']
+            ):
+                query = line
+                break
+    return examples, query
+
+
+def solve_word_cipher(question: str) -> Optional[dict]:
+    """Word-level substitution cipher from -> format."""
+    examples, query = parse_puzzle_arrow(question)
+    if not examples or not query:
+        return None
+    word_map = {}
+    for lhs, rhs in examples:
+        lhs_words = lhs.split()
+        rhs_words = rhs.split()
+        if len(lhs_words) != len(rhs_words):
+            continue
+        for enc, dec in zip(lhs_words, rhs_words):
+            if enc in word_map and word_map[enc] != dec:
+                return None  # inconsistent mapping
+            word_map[enc] = dec
+    if not word_map:
+        return None
+    result_words = []
+    for w in query.split():
+        result_words.append(word_map.get(w, w))
+    return {"word_map": word_map, "result": " ".join(result_words)}
+
+
 def solve_cipher(question: str) -> Optional[dict]:
-    """Substitution cipher: build char map from examples, apply to query."""
+    """Character-level substitution cipher: build char map from = examples."""
     examples, query = parse_puzzle(question)
     if not examples or not query:
         return None
@@ -74,10 +124,31 @@ def solve_cipher(question: str) -> Optional[dict]:
     return {"char_map": char_map, "result": "".join(result)}
 
 
-def build_cipher_trace(question: str, answer: str) -> str:
+def build_word_cipher_trace(question: str, answer: str) -> str:
+    examples, query = parse_puzzle_arrow(question)
+    solved = solve_word_cipher(question)
+    t = "This is a word-level substitution cipher puzzle.\n\n"
+    t += "**Step 1: Extract word-to-word mapping from examples**\n"
+    for i, (lhs, rhs) in enumerate(examples[:6]):
+        t += f"  Example {i+1}: `{lhs}` → `{rhs}`\n"
+    if solved and solved["word_map"]:
+        t += "\n**Step 2: Build decoded word dictionary**\n"
+        for k, v in list(solved["word_map"].items())[:15]:
+            t += f"  `{k}` → `{v}`\n"
+    t += f"\n**Step 3: Decode query `{query or '?'}`**\n"
+    if solved and query:
+        for w in query.split():
+            decoded = solved["word_map"].get(w, f"[{w}=unknown]")
+            t += f"  `{w}` → `{decoded}`\n"
+        t += f"\n  Decoded: `{solved['result']}`\n"
+    t += f"\n\\boxed{{{answer}}}"
+    return t
+
+
+def build_char_cipher_trace(question: str, answer: str) -> str:
     examples, query = parse_puzzle(question)
     solved = solve_cipher(question)
-    t = "This is a substitution cipher puzzle.\n\n"
+    t = "This is a character substitution cipher puzzle.\n\n"
     t += "**Step 1: Build the character mapping from examples**\n"
     for i, (lhs, rhs) in enumerate(examples[:5]):
         t += f"  Example {i+1}: `{lhs.strip()}` → `{rhs.strip()}`\n"
@@ -87,13 +158,18 @@ def build_cipher_trace(question: str, answer: str) -> str:
             t += f"  `{k}` → `{v}`\n"
     t += f"\n**Step 3: Decode `{query}`**\n"
     if solved:
-        decoded = []
         for c in (query or "").strip():
             mapped = solved["char_map"].get(c, c)
             t += f"  `{c}` → `{mapped}`\n"
-            decoded.append(mapped)
-    t += f"\nAnswer: \\boxed{{{answer}}}"
+    t += f"\n\\boxed{{{answer}}}"
     return t
+
+
+def build_cipher_trace(question: str, answer: str) -> str:
+    """Dispatch to word-level or character-level cipher trace based on format."""
+    if '->' in question:
+        return build_word_cipher_trace(question, answer)
+    return build_char_cipher_trace(question, answer)
 
 
 # ─── UNIT CONVERSION SOLVER ───────────────────────────────────────────────────
@@ -144,7 +220,7 @@ def build_unit_conversion_trace(question: str, answer: str) -> str:
         avg = sum(factors) / len(factors)
         t += f"\nConversion factor = {avg:.6g} (consistent across all examples)\n"
     t += f"\n**Step 2: Apply to query `{query}`**\n"
-    t += f"Result: \\boxed{{{answer}}}"
+    t += f"\n\\boxed{{{answer}}}"
     return t
 
 
@@ -204,25 +280,102 @@ def build_numeral_trace(question: str, answer: str, base: Optional[int] = None) 
             t += f"  {positional} = {answer}\n"
         except Exception:
             pass
-    t += f"\nAnswer: \\boxed{{{answer}}}"
+    t += f"\n\\boxed{{{answer}}}"
     return t
 
 
 # ─── GRAVITY SOLVER ───────────────────────────────────────────────────────────
 
 def build_gravity_trace(question: str, answer: str) -> str:
+    """Solve d = 0.5 * g * t^2 puzzles by inferring g from examples."""
+    import math
+    lines = [l.strip() for l in question.strip().split('\n') if l.strip()]
+    # Parse "For t = Xs, distance = Y m" lines
+    pairs = []
+    query_t = None
+    for line in lines:
+        t_match = re.search(r't\s*=\s*([\d.]+)', line)
+        d_match = re.search(r'distance\s*=\s*([\d.]+)', line)
+        if t_match and d_match:
+            pairs.append((float(t_match.group(1)), float(d_match.group(1))))
+        elif t_match and ('determine' in line.lower() or 'now' in line.lower() or not d_match):
+            if not d_match:
+                query_t = float(t_match.group(1))
+
+    trace = "This is a modified-gravity puzzle: d = 0.5 × g × t²\n\n"
+    trace += "**Step 1: Infer the gravitational constant g from examples**\n"
+    g_values = []
+    for t_val, d_val in pairs[:5]:
+        g_est = 2 * d_val / (t_val ** 2)
+        g_values.append(g_est)
+        trace += f"  t={t_val}s, d={d_val}m → g = 2×{d_val}/{t_val}² = {g_est:.4f} m/s²\n"
+    if g_values:
+        g = sum(g_values) / len(g_values)
+        trace += f"\n  Average g = {g:.4f} m/s²\n"
+    else:
+        g = 9.81
+    if query_t:
+        computed = 0.5 * g * query_t ** 2
+        trace += f"\n**Step 2: Compute for t = {query_t}s**\n"
+        trace += f"  d = 0.5 × {g:.4f} × {query_t}² = {computed:.4f} m\n"
+    trace += f"\n\\boxed{{{answer}}}"
+    return trace
+
+
+# ─── SYMBOLIC TRANSFORMATION SOLVER ──────────────────────────────────────────
+
+def build_symbolic_trace(question: str, answer: str) -> str:
+    """Handle symbol/character transformation puzzles (= format)."""
     examples, query = parse_puzzle(question)
-    t = "This is a gravity/positional transformation puzzle.\n\n"
-    t += "**Step 1: Observe the transformation rule**\n"
-    for i, (lhs, rhs) in enumerate(examples[:5]):
-        t += f"  Example {i+1}: `{lhs.strip()}` → `{rhs.strip()}`\n"
-    t += "\n**Step 2: Identify the pattern**\n"
-    t += "  - Comparing each position in input vs output\n"
-    t += "  - Looking for a consistent positional shift or rearrangement rule\n"
-    t += "  - Testing if symbols move to fixed positions regardless of starting location\n"
-    t += f"\n**Step 3: Apply rule to `{query}`**\n"
-    t += f"\nAnswer: \\boxed{{{answer}}}"
-    return t
+    trace = "This is a symbolic transformation puzzle.\n\n"
+    trace += "**Step 1: Analyze transformation examples**\n"
+    for i, (lhs, rhs) in enumerate(examples[:6]):
+        trace += f"  `{lhs.strip()}` → `{rhs.strip()}`\n"
+    trace += "\n"
+
+    # Try consistent character-level mapping
+    char_map: dict = {}
+    consistent = True
+    for lhs, rhs in examples:
+        lhs_s, rhs_s = lhs.strip(), rhs.strip()
+        if len(lhs_s) != len(rhs_s):
+            consistent = False
+            break
+        for ci, co in zip(lhs_s, rhs_s):
+            if ci in char_map and char_map[ci] != co:
+                consistent = False
+                break
+            char_map[ci] = co
+        if not consistent:
+            break
+
+    if consistent and char_map:
+        trace += "**Step 2: Character-level mapping identified**\n"
+        for ci, co in sorted(char_map.items())[:16]:
+            trace += f"  `{ci}` → `{co}`\n"
+        trace += f"\n**Step 3: Apply mapping to query `{query or '?'}`**\n"
+        if query:
+            computed = ''.join(char_map.get(c, c) for c in query.strip())
+            for c in query.strip():
+                trace += f"  `{c}` → `{char_map.get(c, c)}`\n"
+            trace += f"\n  Result: `{computed}`\n"
+    else:
+        trace += "**Step 2: Identify structural transformation pattern**\n"
+        # Look for character removal / operator patterns
+        ops_removed = set()
+        for lhs, rhs in examples[:4]:
+            for ch in lhs.strip():
+                if ch not in rhs.strip() and ch in '+-*/\\|^':
+                    ops_removed.add(ch)
+        if ops_removed:
+            trace += f"  Observed: operator characters {ops_removed} appear removed in output\n"
+        else:
+            trace += "  The mapping uses variable-length rules (operator substitution or positional shift)\n"
+        trace += f"\n**Step 3: Apply rule to query `{query or '?'}`**\n"
+        trace += "  Following the pattern established by the examples above...\n"
+
+    trace += f"\n\\boxed{{{answer}}}"
+    return trace
 
 
 # ─── BIT MANIPULATION SOLVER ──────────────────────────────────────────────────
@@ -259,7 +412,7 @@ def build_bit_manipulation_trace(question: str, answer: str) -> str:
     t += "  - Assign values from examples with unique structure first\n"
     t += "  - Cross-reference to confirm consistency\n"
     t += f"\n**Step 4: Evaluate query `{query}`**\n"
-    t += f"\nAnswer: \\boxed{{{answer}}}"
+    t += f"\n\\boxed{{{answer}}}"
     return t
 
 
@@ -305,11 +458,11 @@ def build_cryptarithm_trace(question: str, answer: str) -> str:
     t += "  - Cross-reference all examples to narrow candidates\n"
     t += "  - Apply identified operation (+ / - / × / mod / abs_sub) consistently\n"
     t += f"\n**Step 4: Apply mapping to query `{query}`**\n"
-    t += f"\nAnswer: \\boxed{{{answer}}}"
+    t += f"\n\\boxed{{{answer}}}"
     return t
 
 
-# ─── DISPATCH ─────────────────────────────────────────────────────────────────
+# ─── SYMBOLIC TRANSFORMATION SOLVER ─────────────────────────────────────────────────────────────────
 
 def build_trace(category: str, question: str, answer: str) -> str:
     cat = category.lower()
@@ -323,8 +476,12 @@ def build_trace(category: str, question: str, answer: str) -> str:
         return build_gravity_trace(question, answer)
     elif "bit" in cat:
         return build_bit_manipulation_trace(question, answer)
-    else:  # cryptarithm, equation_symbolic, equation_numeric
+    elif "symbolic" in cat or "equation_symbolic" in cat:
+        return build_symbolic_trace(question, answer)
+    elif "cryptarithm" in cat:
         return build_cryptarithm_trace(question, answer)
+    else:  # equation_numeric fallback — try symbolic then cryptarithm
+        return build_symbolic_trace(question, answer)
 
 
 # ─── SELF-TEST ────────────────────────────────────────────────────────────────
