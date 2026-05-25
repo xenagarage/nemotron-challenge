@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.zip
+checkpoints/
+*.jsonl
+!sft_sample_10.json
+.DS_Store
+wandb/
+runs/
+*.log
+*.parquet
+train*.json
+train*.csv
+test*.json
+test*.csv
