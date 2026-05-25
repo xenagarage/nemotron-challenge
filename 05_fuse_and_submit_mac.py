@@ -21,7 +21,9 @@ from pathlib import Path
 MLX_ADAPTER_DIR  = "./checkpoints/sft-mac"
 FUSED_DIR        = "./checkpoints/fused-mlx"
 ADAPTER_OUT_DIR  = "./checkpoints/final-adapter"
-MODEL_ID         = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+# Training used 4-bit model; fuse still points to official BF16 for submission compatibility
+TRAIN_MODEL_ID   = "mlx-community/NVIDIA-Nemotron-3-Nano-30B-A3B-4bit"
+MODEL_ID         = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"  # base model for adapter_config.json
 LORA_RANK        = 32
 
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
@@ -37,7 +39,7 @@ def fuse_mlx_adapter():
 
     cmd = [
         str(mlx_fuse),
-        "--model", MODEL_ID,
+        "--model", TRAIN_MODEL_ID,  # 4-bit version used for training
         "--adapter-path", MLX_ADAPTER_DIR,
         "--save-path", FUSED_DIR,
         "--dequantize",  # convert back to bf16 for vLLM compatibility

@@ -1,10 +1,11 @@
 # MLX LoRA training config for Nemotron-3-Nano-30B
 # Used by: mlx_lm.lora -c lora_config.yaml
-model: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+# Using pre-quantized 4-bit MLX model (~15GB) for fast loading on M4 Pro
+model: "mlx-community/NVIDIA-Nemotron-3-Nano-30B-A3B-4bit"
 train: true
 data: "sft_mlx_format.jsonl"
 adapter_path: "./checkpoints/sft-mac"
-batch_size: 2
+batch_size: 4
 iters: 2000
 learning_rate: 2e-4
 save_every: 200
