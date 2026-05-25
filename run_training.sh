@@ -70,9 +70,11 @@ echo "  Ctrl+B, then D"
 echo ""
 
 # Build the full pipeline command that runs inside tmux
-PIPELINE=$(cat <<'SCRIPT'
+PIPELINE=$(cat <<SCRIPT
 set -e
-export PATH="$HOME/Library/Python/3.14/bin:/opt/homebrew/bin:$PATH"
+set -o pipefail
+export PATH="\$HOME/Library/Python/3.14/bin:/opt/homebrew/bin:\$PATH"
+cd "$WORKDIR"
 
 LOG="training_$(date +%Y%m%d_%H%M%S).log"
 echo "=== Logging to $LOG ===" | tee -a "$LOG"
@@ -118,8 +120,8 @@ tmux send-keys -t "$SESSION" "export KAGGLE_KEY='$KAGGLE_KEY'" Enter
 tmux send-keys -t "$SESSION" "export HUGGING_FACE_HUB_TOKEN='$HF_TOKEN'" Enter
 
 # Write pipeline to a temp script and run it
-TMPSCRIPT="$(mktemp /tmp/nemotron_run.XXXX.sh)"
-echo "$PIPELINE" > "$TMPSCRIPT"
+TMPSCRIPT="/tmp/nemotron_run_$$.sh"
+printf '%s\n' "$PIPELINE" > "$TMPSCRIPT"
 chmod +x "$TMPSCRIPT"
 
 tmux send-keys -t "$SESSION" "bash '$TMPSCRIPT'; echo 'Session complete. Press any key to exit.'; read" Enter
