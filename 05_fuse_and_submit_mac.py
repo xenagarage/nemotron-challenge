@@ -40,7 +40,7 @@ def fuse_mlx_adapter():
         "--model", MODEL_ID,
         "--adapter-path", MLX_ADAPTER_DIR,
         "--save-path", FUSED_DIR,
-        "--de-quantize",  # convert back to bf16 for vLLM compatibility
+        "--dequantize",  # convert back to bf16 for vLLM compatibility
     ]
 
     env = os.environ.copy()

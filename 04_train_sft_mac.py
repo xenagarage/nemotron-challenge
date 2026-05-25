@@ -98,17 +98,7 @@ def main():
 
     cmd = [
         str(mlx_bin),
-        "--model", MODEL_ID,
-        "--train",
-        "--data", mlx_data_path,
-        "--adapter-path", OUTPUT_DIR,
-        "--lora-layers", str(LORA_LAYERS),
-        "--batch-size", str(BATCH_SIZE),
-        "--learning-rate", str(LEARNING_RATE),
-        "--iters", str(ITERS),
-        "--save-every", str(SAVE_EVERY),
-        "--steps-per-report", "10",
-        "--grad-checkpoint",   # saves memory during backprop
+        "-c", "lora_config.yaml",  # all LoRA params live in the yaml
     ]
 
     if HF_TOKEN:

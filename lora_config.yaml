@@ -1,0 +1,20 @@
+# MLX LoRA training config for Nemotron-3-Nano-30B
+# Used by: mlx_lm.lora -c lora_config.yaml
+model: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+train: true
+data: "sft_mlx_format.jsonl"
+adapter_path: "./checkpoints/sft-mac"
+batch_size: 2
+iters: 2000
+learning_rate: 2e-4
+save_every: 200
+steps_per_report: 10
+grad_checkpoint: true
+seed: 42
+
+# LoRA parameters
+lora_parameters:
+  rank: 32
+  alpha: 64
+  dropout: 0.05
+  scale: 10.0

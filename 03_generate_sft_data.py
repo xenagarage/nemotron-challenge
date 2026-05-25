@@ -76,9 +76,27 @@ def main():
             example.get("answer") or example.get("target") or
             example.get("output") or example.get("solution") or ""
         ).strip()
-        category = (
-            example.get("category") or example.get("type") or "unknown"
-        )
+        # CSV has no category column — infer from prompt text
+        raw_cat = example.get("category") or example.get("type") or ""
+        if not raw_cat:
+            q_lower = question.lower()
+            if "bit manipulation" in q_lower or "bit shift" in q_lower or "xor" in q_lower:
+                raw_cat = "bit_manipulation"
+            elif "cipher" in q_lower or "secret message" in q_lower or "decode" in q_lower:
+                raw_cat = "cipher"
+            elif "unit" in q_lower and ("convert" in q_lower or "meter" in q_lower or "gram" in q_lower or "liter" in q_lower):
+                raw_cat = "unit_conversion"
+            elif "gravity" in q_lower or "fall" in q_lower or "grid" in q_lower:
+                raw_cat = "gravity"
+            elif "numeral" in q_lower or "base" in q_lower or "hexadecimal" in q_lower or "binary" in q_lower:
+                raw_cat = "numeral"
+            elif "cryptarithm" in q_lower or "each letter" in q_lower or "each character" in q_lower:
+                raw_cat = "cryptarithm_deduce"
+            elif "symbolic" in q_lower or "symbol" in q_lower:
+                raw_cat = "equation_symbolic"
+            else:
+                raw_cat = "equation_numeric"
+        category = raw_cat
 
         if not question or not answer:
             skipped += 1
