@@ -70,11 +70,10 @@ echo "  Ctrl+B, then D"
 echo ""
 
 # Build the full pipeline command that runs inside tmux
-PIPELINE=$(cat <<SCRIPT
+PIPELINE=$(cat <<'SCRIPT'
 set -e
 set -o pipefail
-export PATH="\$HOME/Library/Python/3.14/bin:/opt/homebrew/bin:\$PATH"
-cd "$WORKDIR"
+export PATH="$HOME/Library/Python/3.14/bin:/opt/homebrew/bin:$PATH"
 
 LOG="training_$(date +%Y%m%d_%H%M%S).log"
 echo "=== Logging to $LOG ===" | tee -a "$LOG"
