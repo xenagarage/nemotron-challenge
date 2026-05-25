@@ -3,7 +3,7 @@
 # Using pre-quantized 4-bit MLX model (~15GB) for fast loading on M4 Pro
 model: "mlx-community/NVIDIA-Nemotron-3-Nano-30B-A3B-4bit"
 train: true
-data: "sft_mlx_format.jsonl"
+data: "./data"
 adapter_path: "./checkpoints/sft-mac"
 batch_size: 4
 iters: 2000
