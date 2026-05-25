@@ -18,7 +18,7 @@ from trl import GRPOTrainer, GRPOConfig
 from huggingface_hub import login
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
-MODEL_ID        = os.environ.get("MODEL_ID", "nvidia/Nemotron-3-Nano-30B-Instruct")
+MODEL_ID        = os.environ.get("MODEL_ID", "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16")
 SFT_ADAPTER     = "./checkpoints/sft/final"
 OUTPUT_DIR      = "./checkpoints/grpo"
 LORA_RANK       = 32

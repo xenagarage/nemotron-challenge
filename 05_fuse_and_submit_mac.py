@@ -21,7 +21,7 @@ from pathlib import Path
 MLX_ADAPTER_DIR  = "./checkpoints/sft-mac"
 FUSED_DIR        = "./checkpoints/fused-mlx"
 ADAPTER_OUT_DIR  = "./checkpoints/final-adapter"
-MODEL_ID         = "nvidia/Nemotron-3-Nano-30B-Instruct"
+MODEL_ID         = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
 LORA_RANK        = 32
 
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
@@ -85,7 +85,7 @@ def extract_lora_delta():
     peft_config_path = Path(ADAPTER_OUT_DIR) / "adapter_config.json"
     if not peft_config_path.exists():
         peft_config = {
-            "base_model_name_or_path": MODEL_ID,
+            "base_model_name_or_path": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
             "bias": "none",
             "fan_in_fan_out": False,
             "lora_alpha": LORA_RANK * 2,

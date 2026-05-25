@@ -15,7 +15,7 @@ from pathlib import Path
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 # Verify exact model ID at: huggingface.co/collections/nvidia/nvidia-nemotron-v3
-MODEL_ID       = "nvidia/Nemotron-3-Nano-30B-Instruct"
+MODEL_ID       = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
 SFT_DATA_PATH  = "sft_training_data.jsonl"
 OUTPUT_DIR     = "./checkpoints/sft-mac"
 LORA_RANK      = 32     # Competition max

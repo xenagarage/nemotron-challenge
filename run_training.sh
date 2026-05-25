@@ -26,7 +26,15 @@ SESSION="nemotron"
 # Kill any existing session with same name
 tmux kill-session -t "$SESSION" 2>/dev/null || true
 
-# Check HF_TOKEN
+# Auto-load .env if present
+if [[ -f "$(dirname "$0")/.env" ]]; then
+  set -a
+  source "$(dirname "$0")/.env"
+  set +a
+  echo "✓ Loaded credentials from .env"
+fi
+
+# Check HF_TOKEN (required — needed to download the model)
 if [[ -z "$HF_TOKEN" ]]; then
   echo "ERROR: HF_TOKEN is not set."
   echo "Run:  export HF_TOKEN=hf_your_token_here"
@@ -34,13 +42,14 @@ if [[ -z "$HF_TOKEN" ]]; then
   exit 1
 fi
 
-# Check Kaggle credentials
-if [[ -z "$KAGGLE_USERNAME" || -z "$KAGGLE_KEY" ]]; then
-  echo "ERROR: KAGGLE_USERNAME or KAGGLE_KEY not set."
-  echo "Run:"
-  echo "  export KAGGLE_USERNAME=your_username"
-  echo "  export KAGGLE_KEY=your_api_key"
-  echo "Get from: kaggle.com/settings/account → API → Create New Token"
+# Kaggle credentials — only required if train.jsonl not already downloaded
+HAS_DATA=$(ls "$(dirname "$0")"/train*.jsonl 2>/dev/null | head -1)
+if [[ -z "$HAS_DATA" ]] && [[ -z "$KAGGLE_USERNAME" || -z "$KAGGLE_KEY" ]]; then
+  echo "ERROR: No training data found and KAGGLE credentials not set."
+  echo "Either:"
+  echo "  a) Set KAGGLE_USERNAME + KAGGLE_KEY to auto-download, or"
+  echo "  b) Manually download train.jsonl from kaggle.com/competitions/nvidia-nemotron-model-reasoning-challenge/data"
+  echo "     and place it in $(dirname "$0")/"
   exit 1
 fi
 
